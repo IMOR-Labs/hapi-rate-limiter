@@ -442,7 +442,7 @@ describe('plugin', async () => {
 
   it('calls onRedisError if the Redis client errors', () => {
     const err = new Error('SomeError');
-    Sinon.stub(redisClient, 'rateLimit').rejects(new Error('SomeError')).usingPromise(Bluebird.Promise);
+    Sinon.stub(redisClient, 'evalsha').rejects(new Error('SomeError')).usingPromise(Bluebird.Promise);
 
     return server.inject({
       method: 'POST',
@@ -503,7 +503,7 @@ describe('plugin', async () => {
       }
     }]);
 
-    Sinon.stub(redisClient, 'rateLimit').returns(Bluebird.reject('SomeError'));
+    Sinon.stub(redisClient, 'evalsha').returns(Bluebird.reject('SomeError'));
 
     return testServer.inject({
       method: 'GET',
