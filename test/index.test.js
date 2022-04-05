@@ -5,16 +5,13 @@ const expect = require('chai').expect;
 const Bluebird        = require('bluebird');
 const createBoomError = require('create-boom-error');
 const hapi            = require('@hapi/hapi');
-const Redis           = require('redis');
+const Redis           = require('ioredis');
 const Sinon           = require('sinon');
 
 const Authentication  = require('./authentication.js');
 const HapiRateLimiter = require('../lib');
 
-Bluebird.promisifyAll(Redis.RedisClient.prototype);
-Bluebird.promisifyAll(Redis.Multi.prototype);
-
-const redisClient = Redis.createClient({
+const redisClient = new Redis({
   port: process.env.REDIS_PORT || '6379',
   host: process.env.REDIS_HOST || 'localhost'
 });
@@ -267,7 +264,7 @@ describe('plugin', async () => {
       .then((response) => {
         expect(response.result.rate.limit).to.eql(defaultRate.limit);
         expect(response.result.rate.window).to.eql(defaultRate.window);
-        return redisClient.getAsync('hapi-rate-limiter:post:/custom_rate_limit_key_test:custom');
+        return redisClient.get('hapi-rate-limiter:post:/custom_rate_limit_key_test:custom');
       })
       .then((result) => {
         expect(result).to.equal('1');
@@ -286,7 +283,7 @@ describe('plugin', async () => {
       .then((response) => {
         expect(response.result.rate.limit).to.eql(defaultRate.limit);
         expect(response.result.rate.window).to.eql(defaultRate.window);
-        return redisClient.getAsync('hapi-rate-limiter:post:/default_test:123');
+        return redisClient.get('hapi-rate-limiter:post:/default_test:123');
       })
       .then((result) => {
         expect(result).to.equal('1');
@@ -305,7 +302,7 @@ describe('plugin', async () => {
       .then((response) => {
         expect(response.result.rate.limit).to.eql(defaultRate.limit);
         expect(response.result.rate.window).to.eql(defaultRate.window);
-        return redisClient.getAsync('hapi-rate-limiter:custom-prefix:123');
+        return redisClient.get('hapi-rate-limiter:custom-prefix:123');
       })
       .then((result) => {
         expect(result).to.equal('1');
@@ -324,7 +321,7 @@ describe('plugin', async () => {
       .then((response) => {
         expect(response.result.rate.limit).to.eql(defaultRate.limit);
         expect(response.result.rate.window).to.eql(defaultRate.window);
-        return redisClient.getAsync('hapi-rate-limiter:post:/default_test:123');
+        return redisClient.get('hapi-rate-limiter:post:/default_test:123');
       })
       .then((result) => {
         expect(result).to.equal('1');
@@ -345,9 +342,9 @@ describe('plugin', async () => {
           method: 'POST',
           url: '/short_limit_test',
           auth: {
-        credentials: { api_key: '123' },
-        strategy: 'basic'
-      }
+            credentials: { api_key: '123' },
+            strategy: 'basic'
+          }
         });
       })
       .then((response) => {
@@ -364,9 +361,9 @@ describe('plugin', async () => {
           method: 'POST',
           url: '/short_window_test',
           auth: {
-        credentials: { api_key: '123' },
-        strategy: 'basic'
-      }
+            credentials: { api_key: '123' },
+            strategy: 'basic'
+          }
         });
       })
       .then((response) => {
@@ -379,9 +376,9 @@ describe('plugin', async () => {
           method: 'POST',
           url: '/short_window_test',
           auth: {
-        credentials: { api_key: '123' },
-        strategy: 'basic'
-      }
+            credentials: { api_key: '123' },
+            strategy: 'basic'
+          }
         });
       })
       .then((response) => {
@@ -445,7 +442,7 @@ describe('plugin', async () => {
 
   it('calls onRedisError if the Redis client errors', () => {
     const err = new Error('SomeError');
-    Sinon.stub(redisClient, 'evalshaAsync').rejects(new Error('SomeError')).usingPromise(Bluebird.Promise);
+    Sinon.stub(redisClient, 'rateLimit').rejects(new Error('SomeError')).usingPromise(Bluebird.Promise);
 
     return server.inject({
       method: 'POST',
@@ -506,7 +503,7 @@ describe('plugin', async () => {
       }
     }]);
 
-    Sinon.stub(redisClient, 'evalshaAsync').returns(Bluebird.reject('SomeError'));
+    Sinon.stub(redisClient, 'rateLimit').returns(Bluebird.reject('SomeError'));
 
     return testServer.inject({
       method: 'GET',
@@ -596,7 +593,7 @@ describe('register plugin with keyPrefix option set so rate limit is common to a
       .then((response) => {
         expect(response.result.rate.limit).to.eql(defaultRate.limit);
         expect(response.result.rate.window).to.eql(defaultRate.window);
-        return redisClient.getAsync('hapi-rate-limiter:options-prefix:123');
+        return redisClient.get('hapi-rate-limiter:options-prefix:123');
       })
       .then((result) => {
         expect(result).to.equal('1');
@@ -618,9 +615,9 @@ describe('register plugin with keyPrefix option set so rate limit is common to a
           method: 'GET',
           url: '/another_route',
           auth: {
-        credentials: { api_key: '123' },
-        strategy: 'basic'
-      }
+            credentials: { api_key: '123' },
+            strategy: 'basic'
+          }
         });
       })
       .then((response) => {
